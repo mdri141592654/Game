@@ -1,123 +1,168 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Autowaschpark Tycoon</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f0f0f0;
+      background: #eef2f3;
+      margin: 0;
       padding: 20px;
     }
-    #log {
-      white-space: pre-wrap;
-      background: #fff;
-      padding: 10px;
-      border: 1px solid #ccc;
-      max-height: 300px;
-      overflow-y: auto;
+    h1 {
+      color: #2c3e50;
+    }
+    #game {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 800px;
+      margin: auto;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .section {
+      margin-bottom: 20px;
     }
     button {
-      margin-top: 10px;
-      margin-right: 10px;
+      margin: 5px;
+    }
+    .log {
+      background: #f4f4f4;
+      padding: 10px;
+      max-height: 150px;
+      overflow-y: auto;
+      border: 1px solid #ccc;
     }
   </style>
 </head>
 <body>
-  <h1>Autowaschpark Tycoon</h1>
-  <div id="stats"></div>
-  <button onclick="nextWeek()">Nächste Woche starten</button>
-  <button onclick="buyUpgrade()">Upgrade kaufen (500€)</button>
-  <div id="log"></div>
+  <div id="game">
+    <h1>Autowaschpark Tycoon</h1>
+    
+    <div class="section">
+      <strong>Woche:</strong> <span id="week">1</span><br>
+      <strong>Geld:</strong> €<span id="money">1000</span><br>
+      <strong>Kunden diese Woche:</strong> <span id="customers">0</span>
+    </div>
+
+    <div class="section">
+      <h2>Aktionen</h2>
+      <button onclick="nextWeek()">Nächste Woche starten</button>
+      <button onclick="buyCleaner()">Reinigungsmittel kaufen (€100)</button>
+      <button onclick="performMaintenance()">Anlage warten (€200)</button>
+      <button onclick="runMarketing()">Marketing starten (€150)</button>
+      <button onclick="emptyVacuums()">Staubsauger leeren (€50)</button>
+    </div>
+
+    <div class="section">
+      <h2>Upgrades & Features</h2>
+      <button onclick="buyUpgrade('Power-Wasch-Schaum', 500)">Power-Wasch-Schaum (€500)</button>
+      <button onclick="buyUpgrade('Snackautomat', 300)">Snackautomat (€300)</button>
+      <button onclick="buyUpgrade('Wunderbaum-Automat', 400)">Wunderbaum-Automat (€400)</button>
+    </div>
+
+    <div class="section">
+      <h2>Log</h2>
+      <div class="log" id="log"></div>
+    </div>
+  </div>
 
   <script>
-    let geld = 2000;
-    let reinigungsmittel = 100;
-    let wasserKosten = 1;
-    let energieKosten = 1;
-    let reinigungsmittelVerbrauch = 1;
-    let einnahmeProKunde = 20;
-    let kundenBasis = 10;
-    let woche = 1;
-    let upgradeGekauft = false;
+    let week = 1;
+    let money = 1000;
+    let customers = 0;
+    let cleaner = false;
+    let maintained = false;
+    let upgrades = [];
 
-    const miniEvents = [
-      {
-        text: "Festival in der Nähe! +50% Kunden diese Woche",
-        effect: function () {
-          kundenBoost *= 1.5;
-        },
-      },
-      {
-        text: "Wasserkosten steigen um 50%",
-        effect: function () {
-          wasserKosten *= 1.5;
-        },
-      },
-      {
-        text: "Energiepreise sinken um 30%",
-        effect: function () {
-          energieKosten *= 0.7;
-        },
-      },
-      {
-        text: "Regen angesagt... -30% Kunden diese Woche",
-        effect: function () {
-          kundenBoost *= 0.7;
-        },
-      },
-    ];
+    function log(text) {
+      const logBox = document.getElementById("log");
+      logBox.innerHTML = "> " + text + "<br>" + logBox.innerHTML;
+    }
 
-    function updateStats() {
-      document.getElementById("stats").innerText =
-        `Woche: ${woche}\n` +
-        `Geld: ${geld.toFixed(2)}€\n` +
-        `Reinigungsmittel: ${reinigungsmittel} Einheiten\n` +
-        `Upgrade: ${upgradeGekauft ? "✔️" : "❌"}`;
+    function updateUI() {
+      document.getElementById("week").innerText = week;
+      document.getElementById("money").innerText = money.toFixed(2);
+      document.getElementById("customers").innerText = customers;
     }
 
     function nextWeek() {
-      let log = `--- Woche ${woche} ---\n`;
-      let kundenBoost = 1;
+      week++;
+      let baseCustomers = 10;
+      if (cleaner) baseCustomers += 10;
+      if (maintained) baseCustomers += 5;
+      baseCustomers += upgrades.length * 3;
 
-      if (Math.random() < 0.5) {
-        let event = miniEvents[Math.floor(Math.random() * miniEvents.length)];
-        event.effect();
-        log += `Mini-Event: ${event.text}\n`;
-      }
+      customers = Math.floor(baseCustomers * (1 + Math.random()));
 
-      let kunden = Math.floor(kundenBasis * (upgradeGekauft ? 1.2 : 1) * kundenBoost);
-      let maxWaschbar = Math.min(kunden, Math.floor(reinigungsmittel / reinigungsmittelVerbrauch));
-      let einnahmen = maxWaschbar * einnahmeProKunde;
-      let kosten = maxWaschbar * (wasserKosten + energieKosten + reinigungsmittelVerbrauch);
-      reinigungsmittel -= maxWaschbar * reinigungsmittelVerbrauch;
-      geld += einnahmen - kosten;
+      let income = customers * 5;
+      money += income;
 
-      log += `Kunden: ${kunden}\n` +
-             `Bedient: ${maxWaschbar}\n` +
-             `Einnahmen: ${einnahmen.toFixed(2)}€\n` +
-             `Kosten: ${kosten.toFixed(2)}€\n` +
-             `Gewinn: ${(einnahmen - kosten).toFixed(2)}€`;
+      cleaner = false;
+      maintained = false;
 
-      woche++;
-      updateStats();
-      document.getElementById("log").innerText = log + "\n\n" + document.getElementById("log").innerText;
+      log(`Woche ${week}: ${customers} Kunden, Einnahmen €${income.toFixed(2)}`);
+      updateUI();
     }
 
-    function buyUpgrade() {
-      let logMsg;
-      if (!upgradeGekauft && geld >= 500) {
-        geld -= 500;
-        upgradeGekauft = true;
-        logMsg = "Upgrade gekauft! Deine Anlage zieht nun mehr Kunden an.";
+    function buyCleaner() {
+      if (money >= 100) {
+        money -= 100;
+        cleaner = true;
+        log("Reinigungsmittel gekauft.");
+        updateUI();
       } else {
-        logMsg = "Upgrade nicht möglich. Entweder schon gekauft oder zu wenig Geld.";
+        log("Nicht genug Geld für Reinigungsmittel.");
       }
-      updateStats();
-      document.getElementById("log").innerText = logMsg + "\n\n" + document.getElementById("log").innerText;
     }
 
-    updateStats();
+    function performMaintenance() {
+      if (money >= 200) {
+        money -= 200;
+        maintained = true;
+        log("Anlage gewartet.");
+        updateUI();
+      } else {
+        log("Nicht genug Geld für Wartung.");
+      }
+    }
+
+    function runMarketing() {
+      if (money >= 150) {
+        money -= 150;
+        customers += Math.floor(Math.random() * 20) + 10;
+        log("Marketing-Kampagne durchgeführt. Mehr Kunden erwartet!");
+        updateUI();
+      } else {
+        log("Nicht genug Geld für Marketing.");
+      }
+    }
+
+    function emptyVacuums() {
+      if (money >= 50) {
+        money -= 50;
+        log("Staubsauger geleert.");
+        updateUI();
+      } else {
+        log("Nicht genug Geld um Staubsauger zu leeren.");
+      }
+    }
+
+    function buyUpgrade(name, cost) {
+      if (money >= cost && !upgrades.includes(name)) {
+        money -= cost;
+        upgrades.push(name);
+        log(`${name} freigeschaltet!`);
+        updateUI();
+      } else if (upgrades.includes(name)) {
+        log(`${name} wurde bereits gekauft.`);
+      } else {
+        log("Nicht genug Geld für dieses Upgrade.");
+      }
+    }
+
+    updateUI();
   </script>
 </body>
 </html>
