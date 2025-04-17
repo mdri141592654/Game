@@ -34,22 +34,30 @@
       overflow-y: auto;
       border: 1px solid #ccc;
     }
+    #loading {
+      display: none;
+      text-align: center;
+      font-weight: bold;
+      color: #2980b9;
+    }
   </style>
 </head>
 <body>
   <div id="game">
     <h1>Autowaschpark Tycoon</h1>
-    
+
     <div class="section">
       <strong>Woche:</strong> <span id="week">1</span><br>
       <strong>Geld:</strong> €<span id="money">1000</span><br>
-      <strong>Kunden diese Woche:</strong> <span id="customers">0</span>
+      <strong>Kunden diese Woche:</strong> <span id="customers">0</span><br>
+      <strong>Reinigungsmittel übrig:</strong> <span id="cleanerStock">0</span><br>
+      <strong>Anlagen-Zustand:</strong> <span id="wear">0</span>%
     </div>
 
     <div class="section">
       <h2>Aktionen</h2>
-      <button onclick="nextWeek()">Nächste Woche starten</button>
-      <button onclick="buyCleaner()">Reinigungsmittel kaufen (€100)</button>
+      <button onclick="startNextWeek()">Nächste Woche starten</button>
+      <button onclick="buyCleaner()">Reinigungsmittel kaufen (€100 für 50 Einheiten)</button>
       <button onclick="performMaintenance()">Anlage warten (€200)</button>
       <button onclick="runMarketing()">Marketing starten (€150)</button>
       <button onclick="emptyVacuums()">Staubsauger leeren (€50)</button>
@@ -66,14 +74,17 @@
       <h2>Log</h2>
       <div class="log" id="log"></div>
     </div>
+
+    <div id="loading">Woche wird berechnet...</div>
   </div>
 
   <script>
     let week = 1;
     let money = 1000;
     let customers = 0;
-    let cleaner = false;
-    let maintained = false;
+    let cleanerStock = 0;
+    let wear = 0;
+    let marketingActive = false;
     let upgrades = [];
 
     function log(text) {
@@ -85,32 +96,48 @@
       document.getElementById("week").innerText = week;
       document.getElementById("money").innerText = money.toFixed(2);
       document.getElementById("customers").innerText = customers;
+      document.getElementById("cleanerStock").innerText = cleanerStock;
+      document.getElementById("wear").innerText = wear.toFixed(1);
+    }
+
+    function startNextWeek() {
+      document.getElementById("loading").style.display = "block";
+      setTimeout(nextWeek, 2000);
     }
 
     function nextWeek() {
       week++;
       let baseCustomers = 10;
-      if (cleaner) baseCustomers += 10;
-      if (maintained) baseCustomers += 5;
+      if (cleanerStock > 0) baseCustomers += 10;
       baseCustomers += upgrades.length * 3;
 
-      customers = Math.floor(baseCustomers * (1 + Math.random()));
+      let randomMultiplier = 1 + Math.random();
+      if (marketingActive) {
+        randomMultiplier *= 1.2;
+        marketingActive = false;
+      }
 
-      let income = customers * 5;
+      customers = Math.floor(baseCustomers * randomMultiplier);
+
+      let actualWashCount = Math.min(customers, cleanerStock);
+      let income = actualWashCount * 5;
+      cleanerStock -= actualWashCount;
+
+      wear += actualWashCount * 0.5;
+      if (wear > 100) wear = 100;
+
       money += income;
 
-      cleaner = false;
-      maintained = false;
-
-      log(`Woche ${week}: ${customers} Kunden, Einnahmen €${income.toFixed(2)}`);
+      log(`Woche ${week}: ${customers} Kunden, €${income.toFixed(2)} verdient, ${actualWashCount} Wäschen durchgeführt`);
       updateUI();
+      document.getElementById("loading").style.display = "none";
     }
 
     function buyCleaner() {
       if (money >= 100) {
         money -= 100;
-        cleaner = true;
-        log("Reinigungsmittel gekauft.");
+        cleanerStock += 50;
+        log("50 Reinigungsmittel gekauft.");
         updateUI();
       } else {
         log("Nicht genug Geld für Reinigungsmittel.");
@@ -120,8 +147,9 @@
     function performMaintenance() {
       if (money >= 200) {
         money -= 200;
-        maintained = true;
-        log("Anlage gewartet.");
+        wear -= 30;
+        if (wear < 0) wear = 0;
+        log("Anlage gewartet. Zustand verbessert.");
         updateUI();
       } else {
         log("Nicht genug Geld für Wartung.");
@@ -131,8 +159,8 @@
     function runMarketing() {
       if (money >= 150) {
         money -= 150;
-        customers += Math.floor(Math.random() * 20) + 10;
-        log("Marketing-Kampagne durchgeführt. Mehr Kunden erwartet!");
+        marketingActive = true;
+        log("Marketing-Kampagne gestartet. 20% mehr Kunden erwartet!");
         updateUI();
       } else {
         log("Nicht genug Geld für Marketing.");
